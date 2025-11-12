@@ -3,21 +3,27 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from source import preprocess_input_image, batch_predict, conv_float_int, combine_image, load_trained_model, burn_area   
 import numpy as np
-from keras import backend as K
 from tensorflow.python.lib.io import file_io
 import boto3
-from keras.models import load_model
+import os
 
-with open("style.css") as f:
-    st.markdown('<style>{}</style>'.format(f.read()), unsafe_allow_html=True)
+# Set matplotlib to use white background
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Load CSS if it exists
+css_path = os.path.join(os.path.dirname(__file__), "style.css")
+if os.path.exists(css_path):
+    with open(css_path) as f:
+        st.markdown('<style>{}</style>'.format(f.read()), unsafe_allow_html=True)
 
 
 st.title("Wild Fire Detection App")
 
 st.sidebar.markdown("** App Status **")
 
-model, session = load_trained_model("temp_model.h5")
-K.set_session(session)
+model = load_trained_model("temp_model.h5")
 
 
 st.sidebar.markdown('Please upload a raw satellite image')
@@ -33,7 +39,7 @@ if uploaded_file is not None:
     #st.sidebar.text("Pre-processing the image...")
     with st.spinner("Pre-processing the image..."):
         input_image_array = np.array(uploaded_image)
-        original_width, original_height, pix_num = input_image_array.shape
+        original_height, original_width, pix_num = input_image_array.shape
         new_image_array, row_num, col_num = preprocess_input_image(input_image_array)
         st.sidebar.success("Pre-processing has been done.")
 
@@ -50,17 +56,26 @@ if uploaded_file is not None:
 
     #### Show the picture
     st.markdown("** The Predicted Probability is **: ")
-    plt.imshow(output_pred)
-    st.pyplot()
+    fig, ax = plt.subplots(facecolor='white')
+    fig.patch.set_facecolor('white')
+    ax.set_facecolor('white')
+    ax.imshow(output_pred)
+    ax.axis('off')
+    st.pyplot(fig)
+    plt.close(fig)
 
 
     #threshold = st.sidebar.slider("Threshold", 0, 1, 0.25)
     preds_t = (preds > 0.25).astype(np.uint8)
     output_mask = conv_float_int(combine_image(preds_t, row_num, col_num, original_width, original_height, remove_ghost=False)[:,:,0])
     st.markdown("** The Predicted Mask is **: ")
-    plt.imshow(output_mask)
-    st.pyplot()
-    #plt.imshow(output_mask)
+    fig2, ax2 = plt.subplots(facecolor='white')
+    fig2.patch.set_facecolor('white')
+    ax2.set_facecolor('white')
+    ax2.imshow(output_mask)
+    ax2.axis('off')
+    st.pyplot(fig2)
+    plt.close(fig2)
    
     st.sidebar.markdown("** CO2 Emission Calculator **")
     forest_type = st.sidebar.selectbox("Please select the type of forest: ", ('Tropical Forest', 'Temperate Forest', 'Boreal Forest', 'Shrublands', 'Grasslands'))
